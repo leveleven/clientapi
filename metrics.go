@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
 	"strconv"
@@ -23,9 +25,22 @@ type CPU struct {
 	Temp    int
 }
 
+type Disk struct {
+	Status string
+}
+
+type SCSI struct {
+	BlockDevice Blockdevice
+}
+
+type Blockdevice struct {
+	Name string
+}
+
 type Info struct {
 	Memory Memory
 	CPU    CPU
+	Disk   Disk
 }
 
 func GetCPUTemp() (int, error) {
@@ -59,6 +74,32 @@ func GetMemInfo() Memory {
 	return Memory{Total: m.Total, Free: m.Free, Percent: m.UsedPercent}
 }
 
+func GetDiskInfo() Disk {
+	cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalln(err)
+		return Disk{Status: "falded to get disk information"}
+	}
+
+	var t = out.String()
+	if t == "" {
+		return Disk{Status: "no_sata_disk"}
+	} else {
+		// encode json
+		var e SCSI
+		err = json.Unmarshal([]byte(t), &e)
+		if err != nil {
+			log.Fatalln("Failed to encoding: ", err)
+		}
+		fmt.Println(e)
+		return Disk{Status: "ok"}
+		// return "", nil
+	}
+}
+
 func metrics() Info {
-	return Info{Memory: GetMemInfo(), CPU: GetCPUInfo()}
+	return Info{Memory: GetMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}
 }

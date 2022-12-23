@@ -1,5 +1,13 @@
 # clientapi
 
+## 依赖
+```bash
+wget -c https://golang.google.cn/dl/go1.18.9.linux-arm64.tar.gz -O - | sudo tar -xz -C /usr/local
+export PATH=$PATH:/usr/local/go/bin
+
+apt install lshw
+```
+
 ## API调用方式
 
 示例
@@ -17,6 +25,9 @@ response:
   "CPU": {
     "Percent": 8.375634517766944,  // int %
     "Temp": 36                     // int °C
+  }
+  "Disk": {
+    "status": health / unhealth / no_sata_disk
   }
 }
 

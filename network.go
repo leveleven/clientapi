@@ -137,11 +137,12 @@ func GetNetwork() NetworkInfo {
 	if err != nil {
 		log.Fatalln("Failed to run commed: ", err)
 	}
+	var t = out.String()
 
 	var netjs NetworkInfo
-	err = json.Unmarshal([]byte(out.String()), &netjs)
+	err = json.Unmarshal([]byte(t), &netjs)
 	if err != nil {
-		log.Fatalln("Failed to decoding: ", err)
+		log.Fatalln("Failed to encoding: ", err)
 	}
 	return netjs
 }
