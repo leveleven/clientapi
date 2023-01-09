@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"log"
 	"os/exec"
 	"strconv"
@@ -30,17 +30,35 @@ type Disk struct {
 }
 
 type SCSI struct {
-	BlockDevice Blockdevice
+	Blockdevices []BlockDevice
 }
 
-type Blockdevice struct {
+type BlockDevice struct {
 	Name string
 }
 
-type Info struct {
+type Smartctl struct {
+	AtaSmartErrorLog Log
+}
+
+type Log struct {
+	Summary Summary
+}
+
+type Summary struct {
+	Conut int
+}
+
+type Data struct {
 	Memory Memory
 	CPU    CPU
 	Disk   Disk
+}
+
+type Respond struct {
+	Data Data
+	ErrorCode int
+	ErrorMsg string
 }
 
 func GetCPUTemp() (int, error) {
@@ -75,7 +93,8 @@ func GetMemInfo() Memory {
 }
 
 func GetDiskInfo() Disk {
-	cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
+	// cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
+	cmd := exec.Command("lsblk", "-S", "-J")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -94,12 +113,40 @@ func GetDiskInfo() Disk {
 		if err != nil {
 			log.Fatalln("Failed to encoding: ", err)
 		}
-		fmt.Println(e)
-		return Disk{Status: "ok"}
+		// fmt.Println(e.Blockdevices[0].Name)
+		
+		return Disk{Status: GetDiskLog(e.Blockdevices[0].Name)}
 		// return "", nil
 	}
 }
 
-func metrics() Info {
-	return Info{Memory: GetMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}
+func GetDiskLog(device string) string {
+	var path = "/dev/" + device
+	cmd := exec.Command("smartctl", "-json", "-l", "error", path)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalln(err)
+		// return Disk{Status: "falded to get disk information"}
+	}
+
+	var s Smartctl
+	err = json.Unmarshal([]byte(out.String()), &s)
+	if err != nil {
+		log.Fatalln("Failed to encoding: ", err)
+	}
+
+	var error_count = s.AtaSmartErrorLog.Summary.Conut
+	if error_count == 0 {
+		return "health"
+	} else if error_count > 0 {
+		return "unhealth"
+	} else {
+		return "error"
+	}
+}
+
+func metrics() Respond {
+	return Respond{Data: Data{Memory: GetMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}, ErrorCode: 0, ErrorMsg: ""}
 }
