@@ -95,7 +95,7 @@ func GetNetplanFile() (filename string) {
 // 	return strconv.Itoa(ones), nil
 // }
 
-func NetworkConfig(address string, netmask string, gateway string, dns []string) bool {
+func NetworkConfig(address string, netmask string, gateway string, dns []string, need_reboot bool) bool {
 	f, newfile_err := os.CreateTemp("/tmp/", "config")
 	if newfile_err != nil {
 		log.Fatalln("Failed to write configuration file", newfile_err)
@@ -126,11 +126,21 @@ func NetworkConfig(address string, netmask string, gateway string, dns []string)
 		return false
 	}
 	log.Printf("move %s to /etc/network/interfaces", f.Name())
+
+	if need_reboot {
+		cmd := "nmcli c reload | nmcli c up ifname eth0"
+		exc := exec.Command("bash", "-c", cmd)
+		err := exc.Run()
+		if err != nil {
+			log.Fatalln(err)
+			return false
+		}
+	}
 	return true
 }
 
 func GetNetwork() NetworkInfo {
-	cmd := exec.Command("bash", "-c", "ip -j addr | jq '.[2] | {Name: .ifname, Address:.address, ip:.addr_info[0].local, netmask:.addr_info[0].prefixlen}'")
+	cmd := exec.Command("bash", "-c", "ip -j addr | jq '.[1] | {Name: .ifname, Address:.address, ip:.addr_info[0].local, netmask:.addr_info[0].prefixlen}'")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

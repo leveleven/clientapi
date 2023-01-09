@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	// "fmt"
 	"log"
 	"os/exec"
 	"strconv"
@@ -15,18 +14,18 @@ import (
 )
 
 type Memory struct {
-	Total   uint64
-	Free    uint64
-	Percent float64
+	Total   uint64  `json:"total"`
+	Free    uint64  `json:"free"`
+	Percent float64 `json:"percent"`
 }
 
 type CPU struct {
-	Percent float64
-	Temp    int
+	Percent float64 `json:"percent"`
+	Temp    int     `json:"temp"`
 }
 
 type Disk struct {
-	Status string
+	Status string `json:"status"`
 }
 
 type SCSI struct {
@@ -50,15 +49,15 @@ type Summary struct {
 }
 
 type Data struct {
-	Memory Memory
-	CPU    CPU
-	Disk   Disk
+	Memory Memory `json:"memory"`
+	CPU    CPU    `json:"cpu"`
+	Disk   Disk   `json:"disk"`
 }
 
-type Respond struct {
-	Data Data
-	ErrorCode int
-	ErrorMsg string
+type Respones struct {
+	Data      Data     `json:"data"`
+	ErrorCode int      `json:"error_code"`
+	ErrorMsg  []string `json:"error_msg"`
 }
 
 func GetCPUTemp() (int, error) {
@@ -80,19 +79,39 @@ func GetCPUTemp() (int, error) {
 	return temp, nil
 }
 
-func GetCPUInfo() CPU {
-	percent, _ := cpu.Percent(time.Second, false)
-	temp, _ := GetCPUTemp()
-	return CPU{Percent: percent[0], Temp: temp}
+func (r *Respones) GetCPUInfo() (string, error) {
+	percent, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		return "cpu", err
+	}
+
+	temp, err := GetCPUTemp()
+	if err != nil {
+		return "cpu", err
+	}
+
+	r.Data.CPU.Percent = percent[0]
+	r.Data.CPU.Temp = temp
+
+	return "cpu", nil
+	// return CPU{Percent: percent[0], Temp: temp}
 }
 
-func GetMemInfo() Memory {
+func (r *Respones) GetMemInfo() (string, error) {
 	// byte
-	m, _ := mem.VirtualMemory()
-	return Memory{Total: m.Total, Free: m.Free, Percent: m.UsedPercent}
+	vm, err := mem.VirtualMemory()
+	if err != nil {
+		return "mem", err
+	}
+
+	r.Data.Memory.Total = vm.Total
+	r.Data.Memory.Free = vm.Free
+	r.Data.Memory.Percent = vm.UsedPercent
+	return "mem", nil
+	// return Memory{Total: vm.Total, Free: vm.Free, Percent: vm.UsedPercent}
 }
 
-func GetDiskInfo() Disk {
+func (r *Respones) GetDiskInfo() (string, error) {
 	// cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
 	cmd := exec.Command("lsblk", "-S", "-J")
 	var out bytes.Buffer
@@ -100,27 +119,34 @@ func GetDiskInfo() Disk {
 	err := cmd.Run()
 	if err != nil {
 		log.Fatalln(err)
-		return Disk{Status: "falded to get disk information"}
+		return "disk", err
+		// return Disk{Status: "falded to get disk information"}
 	}
 
 	var t = out.String()
 	if t == "" {
-		return Disk{Status: "no_sata_disk"}
+		r.Data.Disk.Status = "no_sata_disk"
+		// return Disk{Status: "no_sata_disk"}
 	} else {
 		// encode json
 		var e SCSI
 		err = json.Unmarshal([]byte(t), &e)
 		if err != nil {
 			log.Fatalln("Failed to encoding: ", err)
+			return "disk", err
 		}
 		// fmt.Println(e.Blockdevices[0].Name)
-		
-		return Disk{Status: GetDiskLog(e.Blockdevices[0].Name)}
+		r.Data.Disk.Status, err = GetDiskLog(e.Blockdevices[0].Name)
+		if err != nil {
+			return "disk", err
+		}
+		// return Disk{Status: GetDiskLog(e.Blockdevices[0].Name)}
 		// return "", nil
 	}
+	return "disk", nil
 }
 
-func GetDiskLog(device string) string {
+func GetDiskLog(device string) (string, error) {
 	var path = "/dev/" + device
 	cmd := exec.Command("smartctl", "-json", "-l", "error", path)
 	var out bytes.Buffer
@@ -128,25 +154,49 @@ func GetDiskLog(device string) string {
 	err := cmd.Run()
 	if err != nil {
 		log.Fatalln(err)
+		return "", err
 		// return Disk{Status: "falded to get disk information"}
 	}
 
 	var s Smartctl
-	err = json.Unmarshal([]byte(out.String()), &s)
+	err = json.Unmarshal([]byte(out.Bytes()), &s)
 	if err != nil {
 		log.Fatalln("Failed to encoding: ", err)
+		return "", err
 	}
 
-	var error_count = s.AtaSmartErrorLog.Summary.Conut
+	error_count := s.AtaSmartErrorLog.Summary.Conut
 	if error_count == 0 {
-		return "health"
+		return "health", nil
 	} else if error_count > 0 {
-		return "unhealth"
+		return "unhealth", nil
 	} else {
-		return "error"
+		return "error", nil
 	}
 }
 
-func metrics() Respond {
-	return Respond{Data: Data{Memory: GetMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}, ErrorCode: 0, ErrorMsg: ""}
+func (res *Respones) ErrorRes(p string, err error) {
+	res.ErrorCode = 1
+	msg := p + ": " + err.Error()
+
+	res.ErrorMsg = append(res.ErrorMsg, msg)
+}
+
+func metrics() Respones {
+	var res Respones
+	m, err := res.GetMemInfo()
+	if err != nil {
+		res.ErrorRes(m, err)
+	}
+	c, err := res.GetCPUInfo()
+	if err != nil {
+		res.ErrorRes(c, err)
+	}
+	d, err := res.GetDiskInfo()
+	if err != nil {
+		res.ErrorRes(d, err)
+	}
+
+	return res
+	// return Respones{Data: Data{Memory:getMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}, ErrorCode: 0}
 }

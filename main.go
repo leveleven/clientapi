@@ -7,10 +7,11 @@ import (
 )
 
 type Network struct {
-	Address string   `form:"address" json:"address" url:"address" xml:"address" binding:"required"`
-	Netmask string   `form:"netmask" json:"netmask" url:"netmask" xml:"netmask" binding:"required"`
-	Gateway string   `form:"gateway" json:"gateway" url:"gateway" xml:"gateway" binding:"required"`
-	DNS     []string `form:"dns" json:"dns" url:"dns" xml:"dns" binding:"required"`
+	Address    string   `form:"address" json:"address" url:"address" xml:"address" binding:"required"`
+	Netmask    string   `form:"netmask" json:"netmask" url:"netmask" xml:"netmask" binding:"required"`
+	Gateway    string   `form:"gateway" json:"gateway" url:"gateway" xml:"gateway" binding:"required"`
+	DNS        []string `form:"dns" json:"dns" url:"dns" xml:"dns" binding:"required"`
+	NeedReboot bool     `json:"need_reboot" binding:"required"`
 }
 
 func main() {
@@ -24,7 +25,7 @@ func main() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if n := NetworkConfig(json.Address, json.Netmask, json.Gateway, json.DNS); !n {
+		if n := NetworkConfig(json.Address, json.Netmask, json.Gateway, json.DNS, json.NeedReboot); !n {
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "500"})
 			return
 		}
