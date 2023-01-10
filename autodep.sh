@@ -2,6 +2,9 @@
 
 apt install lshw jq smartmontools -y
 
+echo -e "auto eth0\niface eth0 inet dhcp" > /etc/network/interface
+
+
 cp clientapi /usr/local/bin/
 cp clientapi.service /lib/systemd/system/
 

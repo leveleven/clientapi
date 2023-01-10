@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
 	"strconv"
@@ -14,8 +15,8 @@ import (
 )
 
 type Memory struct {
-	Total   uint64  `json:"total"`
-	Free    uint64  `json:"free"`
+	Total   int     `json:"total"`
+	Free    int     `json:"free"`
 	Percent float64 `json:"percent"`
 }
 
@@ -55,95 +56,101 @@ type Data struct {
 }
 
 type Respones struct {
-	Data      Data     `json:"data"`
-	ErrorCode int      `json:"error_code"`
-	ErrorMsg  []string `json:"error_msg"`
+	Data      Data   `json:"data"`
+	ErrorCode int    `json:"error_code"`
+	ErrorMsg  string `json:"error_msg"`
 }
 
-func GetCPUTemp() (int, error) {
-	cmd := exec.Command("cat", "/sys/devices/virtual/thermal/thermal_zone0/temp")
+func (res *Respones) ErrorRes(p string, err string) {
+	res.ErrorCode = 1
+	msg := p + ": " + err
+	if res.ErrorMsg == "" {
+		res.ErrorMsg = msg
+	}
+	res.ErrorMsg = res.ErrorMsg + ";" + msg
+}
+
+func GetCPUTemp() (int, string, error) {
+	// 执行命令错误后会直接退出进程，需要优化
+	cmd := exec.Command("cat", "/sys/devices/virtual1/thermal/thermal_zone0/temp")
 	var out bytes.Buffer
+	var stderr bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
 		log.Fatalln(err)
-		return 0, err
+		fmt.Println(fmt.Sprint(err) + ":" + stderr.String())
+		return -1, stderr.String(), err
 	}
 	tempStr := strings.Replace(out.String(), "\n", "", -1)
 	temp, err := strconv.Atoi(tempStr)
 	if err != nil {
 		log.Fatalln("Failed to change string to int: ", err)
-		return 0, err
+		return -1, "Failed to change string to int", err
 	}
 	temp = temp / 1000
-	return temp, nil
+	return temp, "", nil
 }
 
-func (r *Respones) GetCPUInfo() (string, error) {
+func (r *Respones) GetCPUInfo() {
 	percent, err := cpu.Percent(time.Second, false)
 	if err != nil {
-		return "cpu", err
+		r.Data.CPU.Percent = -1
+		r.ErrorRes("cpu", err.Error())
 	}
-
-	temp, err := GetCPUTemp()
-	if err != nil {
-		return "cpu", err
-	}
-
 	r.Data.CPU.Percent = percent[0]
-	r.Data.CPU.Temp = temp
 
-	return "cpu", nil
-	// return CPU{Percent: percent[0], Temp: temp}
+	temp, err_msg, err := GetCPUTemp()
+	if err != nil {
+		r.ErrorRes("cpu", err_msg)
+	}
+	r.Data.CPU.Temp = temp
 }
 
-func (r *Respones) GetMemInfo() (string, error) {
+func (r *Respones) GetMemInfo() {
 	// byte
 	vm, err := mem.VirtualMemory()
 	if err != nil {
-		return "mem", err
+		r.Data.Memory.Free = -1
+		r.Data.Memory.Total = -1
+		r.Data.Memory.Percent = -1
+		r.ErrorRes("mem", err.Error())
 	}
 
-	r.Data.Memory.Total = vm.Total
-	r.Data.Memory.Free = vm.Free
+	r.Data.Memory.Total = int(vm.Total)
+	r.Data.Memory.Free = int(vm.Free)
 	r.Data.Memory.Percent = vm.UsedPercent
-	return "mem", nil
-	// return Memory{Total: vm.Total, Free: vm.Free, Percent: vm.UsedPercent}
 }
 
-func (r *Respones) GetDiskInfo() (string, error) {
+func (r *Respones) GetDiskInfo() {
 	// cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
 	cmd := exec.Command("lsblk", "-S", "-J")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Fatalln(err)
-		return "disk", err
-		// return Disk{Status: "falded to get disk information"}
+		r.Data.Disk.Status = "error"
+		r.ErrorRes("disk", err.Error())
 	}
 
 	var t = out.String()
 	if t == "" {
 		r.Data.Disk.Status = "no_sata_disk"
-		// return Disk{Status: "no_sata_disk"}
 	} else {
 		// encode json
 		var e SCSI
 		err = json.Unmarshal([]byte(t), &e)
 		if err != nil {
-			log.Fatalln("Failed to encoding: ", err)
-			return "disk", err
+			r.Data.Disk.Status = "error"
+			r.ErrorRes("disk", err.Error())
 		}
-		// fmt.Println(e.Blockdevices[0].Name)
 		r.Data.Disk.Status, err = GetDiskLog(e.Blockdevices[0].Name)
 		if err != nil {
-			return "disk", err
+			r.Data.Disk.Status = "error"
+			r.ErrorRes("disk", err.Error())
 		}
-		// return Disk{Status: GetDiskLog(e.Blockdevices[0].Name)}
-		// return "", nil
 	}
-	return "disk", nil
 }
 
 func GetDiskLog(device string) (string, error) {
@@ -155,7 +162,6 @@ func GetDiskLog(device string) (string, error) {
 	if err != nil {
 		log.Fatalln(err)
 		return "", err
-		// return Disk{Status: "falded to get disk information"}
 	}
 
 	var s Smartctl
@@ -175,28 +181,12 @@ func GetDiskLog(device string) (string, error) {
 	}
 }
 
-func (res *Respones) ErrorRes(p string, err error) {
-	res.ErrorCode = 1
-	msg := p + ": " + err.Error()
-
-	res.ErrorMsg = append(res.ErrorMsg, msg)
-}
-
 func metrics() Respones {
 	var res Respones
-	m, err := res.GetMemInfo()
-	if err != nil {
-		res.ErrorRes(m, err)
-	}
-	c, err := res.GetCPUInfo()
-	if err != nil {
-		res.ErrorRes(c, err)
-	}
-	d, err := res.GetDiskInfo()
-	if err != nil {
-		res.ErrorRes(d, err)
-	}
+
+	res.GetMemInfo()
+	res.GetCPUInfo()
+	res.GetDiskInfo()
 
 	return res
-	// return Respones{Data: Data{Memory:getMemInfo(), CPU: GetCPUInfo(), Disk: GetDiskInfo()}, ErrorCode: 0}
 }
