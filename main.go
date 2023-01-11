@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zh-five/xdaemon"
 )
 
 type Network struct {
@@ -15,6 +16,13 @@ type Network struct {
 }
 
 func main() {
+	logFile := "clientapi.log"
+	xdaemon.Background(logFile, true)
+	httpServer()
+}
+
+func httpServer() {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.GET("netcfg", func(c *gin.Context) {
 		c.JSON(http.StatusOK, GetNetwork())

@@ -1,0 +1,9 @@
+[Unit]
+Description="Monitoring and network configuration changes"
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/clientapi
+
+[Install]
+WantedBy=multi-user.target
