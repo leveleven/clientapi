@@ -11,7 +11,7 @@ type Network struct {
 	Netmask    string   `form:"netmask" json:"netmask" url:"netmask" xml:"netmask" binding:"required"`
 	Gateway    string   `form:"gateway" json:"gateway" url:"gateway" xml:"gateway" binding:"required"`
 	DNS        []string `form:"dns" json:"dns" url:"dns" xml:"dns" binding:"required"`
-	NeedReboot bool     `json:"need_reboot" binding:"required"`
+	NeedReboot bool     `form:"need_reboot" json:"need_reboot"`
 }
 
 func main() {
@@ -23,14 +23,16 @@ func main() {
 		var json Network
 		if err := c.ShouldBindJSON(&json); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+			// return
 		}
 		if n := NetworkConfig(json.Address, json.Netmask, json.Gateway, json.DNS, json.NeedReboot); !n {
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "500"})
-			return
+			// return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"info": "restart machine to apply new configure."})
+		if !json.NeedReboot {
+			c.JSON(http.StatusOK, gin.H{
+				"info": "restart machine to apply new configure."})
+		}
 	})
 	r.GET("metrics", func(c *gin.Context) {
 		c.JSON(http.StatusOK, metrics())

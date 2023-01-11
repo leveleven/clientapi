@@ -11,48 +11,71 @@ apt install lshw
 ## API调用方式
 
 示例
+
+- 获取硬件状态
 ```bash
-// 获取硬件状态
 curl http://127.0.0.1:8753/metrics
+```
 
 response:
+```json
 {
   "data": {
     "Memory": {
-      "Total": 4093992960,           // int B
-      "Free": 1986834432,            // int B
-      "Percent": 25.689988094166143  // int %
+      "Total": 4093992960,           // int B, -1表示获取异常
+      "Free": 1986834432,            // int B, -1表示获取异常
+      "Percent": 25.689988094166143  // int %, -1表示获取异常
     },
     "CPU": {
-      "Percent": 8.375634517766944,  // int %
-      "Temp": 36                     // int °C
+      "Percent": 8.375634517766944,  // int %, -1表示获取异常
+      "Temp": 36                     // int °C, -1表示获取异常
     }
     "Disk": {
-      "status": health / unhealth / no_sata_disk
+      "status": health / unhealth / no_sata_disk / error - 获取错误
     }
   },
   "error_code": 0 / 1                // 1为有错误
-  "error_msg": [...] / null
+  "error_msg": string
 }
+```
 
-// 获取网络配置
+- 获取网络配置
+``` bash
 curl 127.0.0.1:8753
+```
 
 response:
+```json
 {
   "Name": "eth0",                  // string
   "Address": "8c:14:7d:d3:5e:9a",  // string MAC
   "IP": "192.168.2.253",           // string
   "Netmask": 24                    // int
 }
+```
 
-// 修改网络配置
-curl 127.0.0.1:8753/netcfg 
+- 修改网络配置
+```bash
+curl 127.0.0.1:8753/netcfg \
     -H 'content-type:application/json' \
-    -X POST
-    -d "{\"address\":\"192.168.1.2\",\"netmask\":\"255.255.255.0\",\"gateway\":\"192.168.1.1\",\"dns\":[\"114.114.114.114\",\"8.8.8.8\"],"need_reboot":0}"
+    -X POST \
+    -d "{\"address\":\"192.168.1.2\",\"netmask\":\"255.255.255.0\",\"gateway\":\"192.168.1.1\",\"dns\":[\"114.114.114.114\",\"8.8.8.8\"],\"need_reboot\":false}"
+// need_reboot 为 bool 类型，0为需要重启，1为否
+```
+
+请求体：
+```json
+{
+  "address": string,
+  "netmask": string,
+  "gateway": string,
+  "dns":     []string,
+  "need_reboot": bool
+}
+```
 
 response:
+```json
 {
 	"info": "restart machine to apply new configure."
 }

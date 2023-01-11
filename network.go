@@ -98,7 +98,7 @@ func GetNetplanFile() (filename string) {
 func NetworkConfig(address string, netmask string, gateway string, dns []string, need_reboot bool) bool {
 	f, newfile_err := os.CreateTemp("/tmp/", "config")
 	if newfile_err != nil {
-		log.Fatalln("Failed to write configuration file", newfile_err)
+		// log.Fatalln("Failed to write configuration file", newfile_err)
 		return false
 	}
 	defer os.Remove(f.Name())
@@ -122,17 +122,18 @@ func NetworkConfig(address string, netmask string, gateway string, dns []string,
 	os.Chmod(f.Name(), 0644)
 	mv_err := os.Rename(f.Name(), "/etc/network/interfaces")
 	if mv_err != nil {
-		log.Fatalf("Failed to remove file %s to /etc/network/interfaces: %s", f.Name(), mv_err)
+		// log.Fatalf("Failed to remove file %s to /etc/network/interfaces: %s", f.Name(), mv_err)
 		return false
 	}
-	log.Printf("move %s to /etc/network/interfaces", f.Name())
+	// log.Printf("move %s to /etc/network/interfaces", f.Name())
 
+	log.Println(need_reboot)
 	if need_reboot {
 		cmd := "nmcli c reload | nmcli c up ifname eth0"
 		exc := exec.Command("bash", "-c", cmd)
 		err := exc.Run()
 		if err != nil {
-			log.Fatalln(err)
+			// log.Fatalln(err)
 			return false
 		}
 	}
