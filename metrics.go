@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -61,7 +60,6 @@ type Respones struct {
 }
 
 func (res *Respones) ErrorRes(p string, err string) {
-	fmt.Println(1)
 	res.ErrorCode = 1
 	msg := p + ": " + err
 	if res.ErrorMsg == "" {

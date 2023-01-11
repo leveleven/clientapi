@@ -6,21 +6,34 @@ import (
 	"encoding/json"
 	"os/exec"
 
-	// "fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
 
-	// "strconv"
 	"strings"
 )
 
+type Net_Response struct {
+	Data      NetworkInfo `json:"data"`
+	ErrorCode int         `json:"error_code"`
+	ErrorMsg  string      `json:"error_msg"`
+}
+
 type NetworkInfo struct {
-	Name    string
-	Address string
-	IP      string
-	Netmask int
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	IP      string `json:"ip"`
+	Netmask int    `json:"netmask"`
+}
+
+func (res *Net_Response) ErrorRes(p string, err string) {
+	res.ErrorCode = 1
+	msg := p + ": " + err
+	if res.ErrorMsg == "" {
+		res.ErrorMsg = msg
+	} else {
+		res.ErrorMsg = res.ErrorMsg + ";" + msg
+	}
 }
 
 func FlagMatch(flags []string, tags []string) (match bool) {
@@ -58,21 +71,21 @@ func GetInterfaseName() (name string) {
 	return
 }
 
-func GetNetplanFile() (filename string) {
-	fileInfos, err := ioutil.ReadDir("/etc/netplan/")
-	if err != nil {
-		log.Fatalln("Failed to open configuration file, ", err)
-		return ""
-	}
+// func GetNetplanFile() (filename string) {
+// 	fileInfos, err := ioutil.ReadDir("/etc/netplan/")
+// 	if err != nil {
+// 		log.Fatalln("Failed to open configuration file, ", err)
+// 		return ""
+// 	}
 
-	for _, info := range fileInfos {
-		if strings.Contains(info.Name(), ".yaml") {
-			log.Println("Get network configure ", info.Name())
-			return info.Name()
-		}
-	}
-	return
-}
+// 	for _, info := range fileInfos {
+// 		if strings.Contains(info.Name(), ".yaml") {
+// 			log.Println("Get network configure ", info.Name())
+// 			return info.Name()
+// 		}
+// 	}
+// 	return
+// }
 
 // 掩码转网络长度
 // func SubNetMaskToLen(netmask string) (string, error) {
@@ -140,20 +153,30 @@ func NetworkConfig(address string, netmask string, gateway string, dns []string,
 	return true
 }
 
-func GetNetwork() NetworkInfo {
+func (n *Net_Response) GetNetworkCfg(netjs NetworkInfo) {
+	n.Data = netjs
+}
+
+func GetNetwork() Net_Response {
+	var nif Net_Response
+
 	cmd := exec.Command("bash", "-c", "ip -j addr | jq '.[1] | {Name: .ifname, Address:.address, ip:.addr_info[0].local, netmask:.addr_info[0].prefixlen}'")
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
+		nif.ErrorRes("net", stderr.String())
 		log.Fatalln("Failed to run commed: ", err)
 	}
-	var t = out.String()
+	var t = stdout.String()
 
 	var netjs NetworkInfo
 	err = json.Unmarshal([]byte(t), &netjs)
+	nif.GetNetworkCfg(netjs)
 	if err != nil {
+		nif.ErrorRes("net", stderr.String())
 		log.Fatalln("Failed to encoding: ", err)
 	}
-	return netjs
+	return nif
 }
