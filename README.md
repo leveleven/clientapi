@@ -81,6 +81,22 @@ response:
 }
 ```
 
+- 获取SN码
+```bash
+curl 127.0.0.1:8753/ns
+```
+
+response:
+```json
+{
+  "data": {
+    "serial": "xjcc00000000"
+  },
+  "error_code": 0,
+  "error_msg": ""
+}
+```
+
 ## 更新日志
 
 2023-2-7 API增加SN码获取，标签重启动作
