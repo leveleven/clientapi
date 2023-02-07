@@ -48,7 +48,7 @@ type Summary struct {
 }
 
 type MachineInfo struct {
-	Data []struct {
+	Data struct {
 		Serial string `json:"serial"`
 	} `json:"data"`
 	ErrorCode int    `json:"error_code"`
@@ -187,7 +187,7 @@ func GetDiskLog(device string) (string, string, error) {
 }
 
 func getns() MachineInfo {
-	sn := exec.Command("lshw", "-disable", "pci", "-disable", "usb", "-c", "system", "-quiet", "-json")
+	sn := exec.Command("bash", "-c", "lshw -disable pci -disable usb -c system -quiet -json | jq .[0]")
 	var stdout, stderr bytes.Buffer
 	sn.Stdout = &stdout
 	sn.Stderr = &stderr
@@ -195,7 +195,9 @@ func getns() MachineInfo {
 
 	var n MachineInfo
 	if err != nil {
-		n.Data = nil
+		n.Data = struct {
+			Serial string "json:\"serial\""
+		}{}
 		n.ErrorCode = 1
 		n.ErrorMsg = stderr.String()
 		return n
@@ -203,10 +205,16 @@ func getns() MachineInfo {
 
 	err = json.Unmarshal([]byte(stdout.Bytes()), &n.Data)
 	if err != nil {
-		n.Data = nil
+		n.Data = struct {
+			Serial string "json:\"serial\""
+		}{}
 		n.ErrorCode = 1
 		n.ErrorMsg = err.Error()
 		return n
+	}
+
+	if n.Data.Serial == "" {
+		n.Data.Serial = "xjcc00000000"
 	}
 
 	return n

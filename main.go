@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zh-five/xdaemon"
@@ -16,13 +17,18 @@ type Network struct {
 }
 
 func main() {
-	logFile := "clientapi.log"
-	xdaemon.Background(logFile, true)
-	httpServer()
+	debug := os.Getenv("BOX_DEBUG")
+	if debug != "on" {
+		logFile := "clientapi.log"
+		xdaemon.Background(logFile, true)
+	}
+	httpServer(debug)
 }
 
-func httpServer() {
-	gin.SetMode(gin.ReleaseMode)
+func httpServer(debug string) {
+	if debug != "on" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.Default()
 	r.GET("netcfg", func(c *gin.Context) {
 		c.JSON(http.StatusOK, GetNetwork())
