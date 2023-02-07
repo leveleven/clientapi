@@ -80,3 +80,7 @@ response:
 	"info": "restart machine to apply new configure."
 }
 ```
+
+## 更新日志
+
+2023-2-7 API增加SN码获取，标签重启动作
