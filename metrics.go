@@ -47,6 +47,14 @@ type Summary struct {
 	Conut int
 }
 
+type MachineInfo struct {
+	Data []struct {
+		Serial string `json:"serial"`
+	} `json:"data"`
+	ErrorCode int    `json:"error_code"`
+	ErrorMsg  string `json:"error_msg"`
+}
+
 type Data struct {
 	Memory Memory `json:"memory"`
 	CPU    CPU    `json:"cpu"`
@@ -176,6 +184,32 @@ func GetDiskLog(device string) (string, string, error) {
 	} else {
 		return "error", "", nil
 	}
+}
+
+func getns() MachineInfo {
+	sn := exec.Command("lshw", "-disable", "pci", "-disable", "usb", "-c", "system", "-quiet", "-json")
+	var stdout, stderr bytes.Buffer
+	sn.Stdout = &stdout
+	sn.Stderr = &stderr
+	err := sn.Run()
+
+	var n MachineInfo
+	if err != nil {
+		n.Data = nil
+		n.ErrorCode = 1
+		n.ErrorMsg = stderr.String()
+		return n
+	}
+
+	err = json.Unmarshal([]byte(stdout.Bytes()), &n.Data)
+	if err != nil {
+		n.Data = nil
+		n.ErrorCode = 1
+		n.ErrorMsg = err.Error()
+		return n
+	}
+
+	return n
 }
 
 func metrics() Respones {

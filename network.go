@@ -142,9 +142,12 @@ func NetworkConfig(address string, netmask string, gateway string, dns []string,
 
 	log.Println(need_reboot)
 	if need_reboot {
-		cmd := "nmcli c reload | nmcli c up ifname eth0"
-		exc := exec.Command("bash", "-c", cmd)
-		err := exc.Run()
+		// cmd := "nmcli c reload | nmcli c up ifname eth0"
+		// exc := exec.Command("bash", "-c", cmd)
+		// err := exc.Run()
+		// reboot
+		reboot := exec.Command("reboot")
+		err := reboot.Run()
 		if err != nil {
 			// log.Fatalln(err)
 			return false
