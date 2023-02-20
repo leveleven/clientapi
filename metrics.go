@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 )
@@ -33,6 +35,7 @@ type SCSI struct {
 
 type BlockDevice struct {
 	Name string
+	TRAN string
 }
 
 type Smartctl struct {
@@ -127,7 +130,7 @@ func (r *Respones) GetMemInfo() {
 }
 
 func (r *Respones) GetDiskInfo() {
-	// cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME")
+	// cmd := exec.Command("lsblk", "-S", "-J", "-o", "NAME,TRAN,FSTYPE")
 	cmd := exec.Command("lsblk", "-S", "-J")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -149,12 +152,18 @@ func (r *Respones) GetDiskInfo() {
 			r.Data.Disk.Status = "error"
 			r.ErrorRes("disk", err.Error())
 		}
-		disk_status, err_msg, err := GetDiskLog(e.Blockdevices[0].Name)
-		if err != nil {
-			r.Data.Disk.Status = "error"
-			r.ErrorRes("disk", err_msg)
-		} else {
-			r.Data.Disk.Status = disk_status
+		// 硬盘优化点
+		for _, device := range e.Blockdevices {
+			if device.TRAN == "sata" {
+				disk_status, err_msg, err := GetDiskLog(device.Name)
+				if err != nil {
+					r.Data.Disk.Status = "error"
+					r.ErrorRes("disk", err_msg)
+				} else {
+					r.Data.Disk.Status = disk_status
+				}
+				break
+			}
 		}
 	}
 }
@@ -213,8 +222,17 @@ func getns() MachineInfo {
 		return n
 	}
 
-	if n.Data.Serial == "" {
-		n.Data.Serial = "xjcc00000000"
+	env_err := godotenv.Load("/root/.env")
+	if env_err != nil {
+		n.Data = struct {
+			Serial string "json:\"serial\""
+		}{}
+		n.ErrorCode = 1
+		n.ErrorMsg = err.Error()
+	}
+	ns := os.Getenv("NS")
+	if ns != "" {
+		n.Data.Serial = ns
 	}
 
 	return n
