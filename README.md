@@ -100,7 +100,10 @@ response:
 ## 测试
 
 ### sn码测试
-- 在/root/目录下面创建.env文件，并在文件中输入测试sn码，如"xjcc123123123"
+- 在/root/目录下面创建.env文件，并在文件中输入测试sn码，如：
+```text
+SN="xjcc123123123"
+```
 - 保存好文件后，重启clientapi服务生效
 ```bash
 systemctl restart clientapi

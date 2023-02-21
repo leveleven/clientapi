@@ -230,9 +230,9 @@ func getns() MachineInfo {
 		n.ErrorCode = 1
 		n.ErrorMsg = err.Error()
 	}
-	ns := os.Getenv("NS")
-	if ns != "" {
-		n.Data.Serial = ns
+	env_sn := os.Getenv("SN")
+	if env_sn != "" {
+		n.Data.Serial = env_sn
 	}
 
 	return n
