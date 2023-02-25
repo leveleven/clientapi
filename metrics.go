@@ -68,6 +68,7 @@ type Respones struct {
 	Data      Data   `json:"data"`
 	ErrorCode int    `json:"error_code"`
 	ErrorMsg  string `json:"error_msg"`
+	Version   string `json:"version"`
 }
 
 func (res *Respones) ErrorRes(p string, err string) {
@@ -195,7 +196,7 @@ func GetDiskLog(device string) (string, string, error) {
 	}
 }
 
-func getns() MachineInfo {
+func getsn() MachineInfo {
 	sn := exec.Command("bash", "-c", "lshw -disable pci -disable usb -c system -quiet -json | jq .[0]")
 	var stdout, stderr bytes.Buffer
 	sn.Stdout = &stdout
@@ -244,6 +245,7 @@ func metrics() Respones {
 	res.GetMemInfo()
 	res.GetCPUInfo()
 	res.GetDiskInfo()
+	res.Version = "0.1.0"
 
 	return res
 }

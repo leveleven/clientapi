@@ -51,7 +51,7 @@ func httpServer(debug string) {
 	r.GET("metrics", func(c *gin.Context) {
 		c.JSON(http.StatusOK, metrics())
 	})
-	r.GET("ns", func(c *gin.Context) {
+	r.GET("sn", func(c *gin.Context) {
 		c.JSON(http.StatusOK, getns())
 	})
 	r.Run(":8753")
