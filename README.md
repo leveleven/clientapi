@@ -29,12 +29,12 @@ response:
     "CPU": {
       "Percent": 8.375634517766944,  // int %, -1表示获取异常
       "Temp": 36                     // int °C, -1表示获取异常
-    }
+    },
     "Disk": {
       "status": health / unhealth / no_sata_disk / error - 获取错误
     }
   },
-  "error_code": 0 / 1                // 1为有错误
+  "error_code": 0 / 1,                // 1为有错误
   "error_msg": string
 }
 ```
@@ -83,7 +83,7 @@ response:
 
 - 获取SN码
 ```bash
-curl 127.0.0.1:8753/ns
+curl 127.0.0.1:8753/sn
 ```
 
 response:
