@@ -35,7 +35,8 @@ response:
     }
   },
   "error_code": 0 / 1,                // 1为有错误
-  "error_msg": string
+  "error_msg": string,
+  "version": string
 }
 ```
 
