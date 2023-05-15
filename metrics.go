@@ -223,22 +223,22 @@ func getsn() MachineInfo {
 		return n
 	}
 
-	_, notfound := os.Stat("test.txt")
+	_, notfound := os.Stat("/root/.env")
 	if notfound != nil {
-		env_err := godotenv.Load("/root/.env")
-		if env_err != nil {
-			n.Data = struct {
-				Serial string "json:\"serial\""
-			}{}
-			n.ErrorCode = 1
-			n.ErrorMsg = env_err.Error()
-		}
-		env_sn := os.Getenv("SN")
-		if env_sn != "" {
-			n.Data.Serial = env_sn
-		}
+		return n
 	}
-
+	env_err := godotenv.Load("/root/.env")
+	if env_err != nil {
+		n.Data = struct {
+			Serial string "json:\"serial\""
+		}{}
+		n.ErrorCode = 1
+		n.ErrorMsg = env_err.Error()
+	}
+	env_sn := os.Getenv("SN")
+	if env_sn != "" {
+		n.Data.Serial = env_sn
+	}
 	return n
 }
 
