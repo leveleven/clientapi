@@ -163,8 +163,7 @@ func (n *Net_Response) GetNetworkCfg(netjs NetworkInfo) {
 func GetNetwork() Net_Response {
 	var nif Net_Response
 
-	iface := "eth0"
-	cmd := exec.Command("bash", "-c", "ip -j addr | jq '.[] | select(.ifname==", iface, ") | {Name: .ifname, Address:.address, ip:.addr_info[0].local, netmask:.addr_info[0].prefixlen}'")
+	cmd := exec.Command("bash", "-c", "ip -j addr | jq '.[] | select(.ifname==\"eth0\") | {Name: .ifname, Address:.address, ip:.addr_info[0].local, netmask:.addr_info[0].prefixlen}'")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
