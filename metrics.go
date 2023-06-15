@@ -248,7 +248,7 @@ func metrics() Respones {
 	res.GetMemInfo()
 	res.GetCPUInfo()
 	res.GetDiskInfo()
-	res.Version = "0.1.0"
+	res.Version = "0.1.1"
 
 	return res
 }
